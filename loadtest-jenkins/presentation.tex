@@ -1,0 +1,110 @@
+\documentclass{beamer}
+\usepackage{tikz}
+\usetikzlibrary{positioning} 
+\usetikzlibrary{arrows.meta}
+
+\title{Automatic and Repeatable Loadtests}
+\subtitle{Overview of past and future}
+\author{Troy Sankey}
+\date{\today}
+
+\begin{document}
+
+\tikzstyle{base} = [rectangle, draw=black, text centered, text width=5em]
+\tikzstyle{mstep} = [base]
+\tikzstyle{to} = [->,>={Latex[width=2mm,length=2mm]}]
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+%% old old ways
+\begin{frame}
+\frametitle{Really Old Way}
+\setbeamercovered{invisible}
+\begin{center}
+\begin{tikzpicture}
+\node[mstep] (sandbox) {Provision sandbox (0:45)};\pause
+\node[mstep, right=of sandbox] (navigate) {Navigate to web UI};
+\draw[to] (sandbox) -- (navigate);\pause
+\node[mstep, below right=of navigate] (noconfig) {Realize you can't configure test settings};
+\draw[to] (navigate) -- (noconfig);\pause
+\node[mstep, left=of noconfig] (ssh) {Give yourself ssh access (0:10)};
+\draw[to] (noconfig) -- (ssh);\pause
+\node[mstep, left=of ssh] (config) {Reconfigure test (0:10)};
+\draw[to] (ssh) -- (config);\pause
+\draw[to] (config) -- (navigate);\pause
+\node[mstep, right=of navigate] (profit) {Profit};
+\draw[to] (navigate) -- (profit);
+\end{tikzpicture}
+\end{center}
+\end{frame}
+
+%% old ways
+\begin{frame}
+\frametitle{Old Way}
+\setbeamercovered{invisible}
+\begin{center}
+\begin{tikzpicture}
+\node[mstep] (sandbox) {Provision sandbox (0:45)};\pause
+\node[mstep, right=of sandbox] (ssh) {SSH to host};
+\draw[to] (sandbox) -- (ssh);\pause
+\node[mstep, right=of ssh] (config) {Configure and run test (0:30)};
+\draw[to] (ssh) -- (config);\pause
+\node[mstep, right=of config] (profit) {Profit};
+\draw[to] (config) -- (profit);
+\end{tikzpicture}
+\end{center}
+\end{frame}
+
+
+%% new ways
+\begin{frame}
+\frametitle{New Way}
+\setbeamercovered{invisible}
+\begin{center}
+\begin{tikzpicture}
+\node[mstep] (job) {Build loadtest job (0:01)};\pause
+\node[mstep, right=of job] (profit) {Profit};
+\draw[to] (job) -- (profit);
+\end{tikzpicture}
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{Short-term Wins}
+
+\pause
+Wins with the new system are not just limited to time savings and other costs
+associated with manual steps.
+
+\begin{itemize}
+\item Metadata about all loadtests are archived for future reference
+\item Remaining "configurables" such as clients and hatch rate have clear descriptions 
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Vision}
+\begin{itemize}
+\pause
+\item Fully repeatable tests
+    \begin{itemize}
+    \item Closer, now that driver setup is repeatable
+    \item Loadtest environment itself is configured out of band
+    \end{itemize}\pause
+\item Clear path forward regarding automatic distributed mode\pause
+\item Regular tests triggered by interval
+    \begin{itemize}
+    \item Very close to this vision, jenkins jobs support multiple types of
+          triggers.
+    \item To make this happen, need to create a solution to allow manipulation
+          of intervals without jenkins admin access.
+    \end{itemize}\pause
+\item Invoking tests from GoCD as part of stage deployment pipeline?\pause
+\item Invoking tests from PRs?\pause
+\item Any other ideas???
+\end{itemize}
+\end{frame}
+
+\end{document}

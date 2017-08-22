@@ -1,0 +1,179 @@
+\documentclass{beamer}
+\usepackage{tikz}
+\usetikzlibrary{positioning} 
+\usetikzlibrary{arrows.meta}
+
+\title{edX Load Tests}
+\subtitle{Introduction And Current Status}
+\author{Troy Sankey}
+\date{\today}
+
+\begin{document}
+
+\tikzstyle{title} = [text centered, text width=10em]
+\tikzstyle{base} = [rectangle, draw=black, text centered, text width=10em]
+\tikzstyle{mstep} = [base]
+\tikzstyle{to} = [->,>={Latex[width=2mm,length=2mm]}]
+\tikzstyle{to-emph} = [to,ultra thick]
+\tikzstyle{to-deemph} = [to,opacity=0.3]
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+\begin{frame}
+\frametitle{Introduction}
+\setbeamercovered{invisible}
+\begin{itemize}
+\item Tests live in the edx/edx-load-tests repo.\pause
+\item Uses locust.io load testing framework.\pause
+\item Tasks are written as python functions.\pause
+% TODO: insert small example of a task
+\item Tasks grouped into TaskSets.\pause
+% TaskSets represent different kinds of activities a user engages in.  For
+% example forums tasks are grouped inside the ForumsTasks TaskSet.
+\item TaskSet nesting.
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{User Experience}
+\setbeamercovered{invisible}
+\begin{itemize}
+\item No browser, no javascript, no good measure of user experience.\pause
+\item Focus on the system response, not the users.\pause
+\item If you want, during a load test you could login from a browser.
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Running Load Tests Overview}
+\setbeamercovered{invisible}
+\begin{center}
+\begin{tikzpicture}
+\node[title] (rightColumn) {Target};
+\node[mstep, below=1em of rightColumn] (loadtest) {Loadtest Environment};\pause
+\node[title, left=of rightColumn] (leftColumn) {Source};
+\node[mstep, left=of loadtest] (runLoadtest) {run-loadtest (jenkins)};
+\uncover<-6>{\draw[to] (runLoadtest) -- (loadtest);}\pause
+\node[mstep, below=of loadtest] (sandbox) {Sandbox};
+\uncover<-6>{\draw[to] (runLoadtest) -- (sandbox);}\pause
+\node[mstep, below=6.5em of runLoadtest] (workstation) {Local workstation};
+\uncover<-6>{\draw[to] (workstation) -- (loadtest);}
+\uncover<-6>{\draw[to] (workstation) -- (sandbox);}\pause
+\node[mstep, below=of runLoadtest] (sandbox2) {Sandbox};
+\uncover<-6>{\draw[to] (sandbox2) -- (loadtest);}
+\uncover<-6>{\draw[to] (sandbox2) -- (sandbox);}\pause
+\node[mstep, below=of sandbox] (devstack) {Devstack};
+\uncover<-6>{\draw[to] (workstation) -- (devstack);}\pause
+
+\draw[to-emph] (runLoadtest) -- (loadtest);
+\draw[to-deemph] (runLoadtest) -- (sandbox);
+\draw[to-deemph] (workstation) -- (loadtest);
+\draw[to-deemph] (workstation) -- (sandbox);
+\draw[to-deemph] (sandbox2) -- (loadtest);
+\draw[to-deemph] (sandbox2) -- (sandbox);
+\draw[to-deemph] (workstation) -- (devstack);
+
+% In most cases, the run-loadtest job targetting the loadtest environment is
+% what to use for large scale testing.
+
+% Driving load against a sandbox will likely reveal most performance
+% regressions, but the loadtest environment awards full-scale database,
+% autoscaling groups, IDAs deployed separately, etc.
+
+% For developing load tests you can just run locust locally and target your
+% local devstack.
+
+\end{tikzpicture}
+\end{center}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Settings}
+\begin{itemize}
+\item Each load test is configurable via a YAML file.\pause
+% This wasn't always the case, do not revert back to reading environment
+% variables!
+\item Use \texttt{helpers.settings}.\pause
+\item The Jenkins job (run-loadtest) will use settings specified by a job
+      parameter.
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Evaluating Load Test Runs}
+\begin{itemize}
+\item Locust provides response time breakdown.\pause
+% But this doesn't really tell us more than NR.
+\item Click on the generated NewRelic links.\pause
+% TODO: insert screenshot
+\item NewRelic provides deeper application insight.\pause
+% TODO: examples
+\item Custom metrics in edx-platform: make use of the custom metrics middleware
+      for peering into application behavior.
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Record Your Findings}
+\begin{itemize}
+\item Create a wiki page before testing.\pause
+% This is a place where you should keep all data, scripts, configuration, and
+% test results.  Armed with the wiki page, another person should be able to
+% reproduce your test.
+\item Caution: Beware of NewRelic data atrophie. NR gets hungry and eats your
+      old dots.\pause
+% Anything over 7 days old is of varying levels of quality.
+\item Continuous deployment $\Rightarrow$ continuous deletion of system metrics!
+% What instances?  They were terminated yesterday!
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Distributed load testing}
+\begin{itemize}
+\item Just run multiple load tests simultaneously in Jenkins.\pause
+% Locust distributed mode not currently implemented in run-loadtest.  It would
+% basically only award us the convenience of one click.
+\item You may need to prime N workers first.\pause
+\item If you want/need real distributed load testing, demand it!
+% Mention that the jenkins 2.0 upgrade is pseudo-blocking any further work on
+% run-loadtest job enhancements.
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{How to maintain load tests}
+\begin{itemize}
+\item Task ratios will rot.\pause
+\item Tasks themselves will rot.\pause
+\item New endpoints will need to be added as new tasks.
+% If you never make sure they work, you may need to fix them every time you
+% need them.  I'll be working on a notification system for indicating when a
+% load test becomes obviously broken.
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{For fun: Real browser load testing}
+\begin{itemize}
+\item \texttt{pip install realbrowserlocusts}, then subclass PhantomJSLocust in
+      your locustfile.
+\item Could make certain tests more realistic (AJAX calls actually happen).
+% E.g. javascript changed to make more AJAX calls
+\item Potentially far more resource intensive on the client side
+% Javascript execution on the client likely becomes a bottleneck.
+\end{itemize}
+\end{frame}
+
+
+\end{document}
