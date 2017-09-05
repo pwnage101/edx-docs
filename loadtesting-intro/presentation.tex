@@ -13,13 +13,6 @@
 \begin{document}
 
 
-\tikzstyle{title} = [text centered, text width=10em]
-\tikzstyle{base} = [rectangle, draw=black, text centered, text width=10em]
-\tikzstyle{mstep} = [base]
-\tikzstyle{to} = [->,>={Latex[width=2mm,length=2mm]}]
-\tikzstyle{to-emph} = [to,ultra thick]
-\tikzstyle{to-deemph} = [to,opacity=0.3]
-
 \begin{frame}
 \titlepage
 \end{frame}
@@ -35,16 +28,32 @@
 
 
 \begin{frame}
-\frametitle{Why?}
+\frametitle{Why Load Test?}
 \setbeamercovered{invisible}
 \begin{itemize}
-% * The most obvious reason is to measure performance improvements to check
-%   your assumptions.
+% * One reason is to measure performance improvements to check your
+%   assumptions.
 \item Performance-related improvements.\pause
-% * But we also don't want to let regressions slip under the rug.
+% * But we also don't want to let regressions fall through the cracks.
 \item Performance-sensitive code changes.
-\item Major version changes.
+\item Major version changes of dependencies.
+% * In the past, people have load tested:
+%   - Docker Devstack
+%   - Upgrading ES
+%   - New course home page
 \end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Overview Of Writing Tests}
+\setbeamercovered{invisible}
+\begin{enumerate}
+\item Identify endpoints.\pause
+\item Write tasks for each endpoint.\pause
+\item Write startup (\texttt{on\_start()}) function.\pause
+\item Write instructions for seeding test data.
+\end{enumerate}
 \end{frame}
 
 
@@ -68,13 +77,12 @@
 \frametitle{\texttt{locustfile.py}}
 \begin{minted}{python}
 class ChatTasks(TaskSet)
-    @task(2)
-    def open_chat():
-        print("opening a chat")
     @task(3)
     def send_message():
-        print("sending a message")
-
+        print("sending a message.")
+    @task(8)
+    def get_emoji():
+        print("getting list of emoji.")
 
 class ServiceTasks(TaskSet):
     tasks = {
@@ -99,13 +107,12 @@ class ServiceUser(HttpLocust):
 \frametitle{\texttt{locustfile.py}}
 \begin{minted}{python}
 class ChatTasks(TaskSet)
-    @task(2)
-    def open_chat():
-        print("opening a chat")
     @task(3)
     def send_message():
-        print("sending a message")
-
+        print("sending a message.")
+    @task(8)
+    def get_emoji():
+        print("getting list of emoji.")
 
 class |\highlight{ServiceTasks}|(TaskSet):
     tasks = {
@@ -128,13 +135,12 @@ class ServiceUser(HttpLocust):
 \frametitle{\texttt{locustfile.py}}
 \begin{minted}{python}
 class |\highlight{ChatTasks}|(TaskSet)
-    @task(2)
-    def open_chat():
-        print("opening a chat")
     @task(3)
     def send_message():
-        print("sending a message")
-
+        print("sending a message.")
+    @task(8)
+    def get_emoji():
+        print("getting list of emoji.")
 
 class ServiceTasks(TaskSet):
     tasks = {
@@ -165,6 +171,27 @@ class ServiceUser(HttpLocust):
 
 
 \begin{frame}
+\frametitle{Settings}
+\begin{itemize}
+\item Each load test is configurable via a YAML file.\pause
+% * This wasn't always the case, do not revert back to reading environment
+%   variables!
+% * Settings module improves test reproducability and clarity.
+\item Use \texttt{helpers.settings}.\pause
+\item The Jenkins job (run-simple-loadtest) will use settings specified by a
+      job parameter.
+\end{itemize}
+\end{frame}
+
+
+\tikzstyle{title} = [text centered, text width=12em]
+\tikzstyle{base} = [rectangle, draw=black, text centered, text width=12em]
+\tikzstyle{mstep} = [base]
+\tikzstyle{to} = [->,>={Latex[width=2mm,length=2mm]}]
+\tikzstyle{to-emph} = [to,ultra thick]
+\tikzstyle{to-deemph} = [to,opacity=0.3]
+
+\begin{frame}
 \frametitle{Overview Of Running Load Tests}
 \setbeamercovered{invisible}
 \begin{center}
@@ -172,7 +199,7 @@ class ServiceUser(HttpLocust):
 \node[title] (rightColumn) {Target};
 \node[mstep, below=1em of rightColumn] (loadtest) {Loadtest Environment};\pause
 \node[title, left=of rightColumn] (leftColumn) {Source};
-\node[mstep, left=of loadtest] (runLoadtest) {run-loadtest (jenkins)};
+\node[mstep, left=of loadtest] (runLoadtest) {run-simple-loadtest (jenkins)};
 \uncover<-6>{\draw[to] (runLoadtest) -- (loadtest);}\pause
 \node[mstep, below=of loadtest] (sandbox) {Sandbox};
 \uncover<-6>{\draw[to] (runLoadtest) -- (sandbox);}\pause
@@ -193,8 +220,8 @@ class ServiceUser(HttpLocust):
 \draw[to-deemph] (sandbox2) -- (sandbox);
 \draw[to-deemph] (workstation) -- (devstack);
 
-% * In most cases, the run-loadtest job targetting the loadtest environment is
-%   what to use for large scale testing.
+% * In most cases, the run-simple-loadtest job targetting the loadtest
+%   environment is what to use for large scale testing.
 %
 % * Driving load against a sandbox will likely reveal most performance
 %   regressions, but the loadtest environment awards full-scale database,
@@ -209,26 +236,13 @@ class ServiceUser(HttpLocust):
 
 
 \begin{frame}
-\frametitle{Settings}
-\begin{itemize}
-\item Each load test is configurable via a YAML file.\pause
-% This wasn't always the case, do not revert back to reading environment
-% variables!
-\item Use \texttt{helpers.settings}.\pause
-\item The Jenkins job (run-loadtest) will use settings specified by a job
-      parameter.
-\end{itemize}
-\end{frame}
-
-
-\begin{frame}
 \frametitle{Evaluating Load Test Runs}
 \begin{itemize}
 \item Locust provides response time breakdown.\pause
 % But this doesn't really tell us more than NR.
 \item Click on the summary artifact.
-\frame{\includegraphics[width=\textwidth]{summary_artifact.png}}
-\pause
+      \frame{\includegraphics[height=12em]{summary_artifact.png}}
+      \pause
 \item NewRelic provides deeper application insight.\pause
 % TODO: examples
 \item Custom metrics in edx-platform: make use of the custom metrics middleware
@@ -257,12 +271,12 @@ class ServiceUser(HttpLocust):
 \frametitle{Distributed load testing}
 \begin{itemize}
 \item Just run multiple load tests simultaneously in Jenkins.\pause
-% Locust distributed mode not currently implemented in run-loadtest.  It would
-% basically only award us the convenience of one click.
+% * Locust distributed mode not currently implemented in run-simple-loadtest.
+%   It would basically only award us the convenience of one click.
 \item You may need to prime N workers first.\pause
 \item If you want/need real distributed load testing, demand it!
-% Mention that the jenkins 2.0 upgrade is pseudo-blocking any further work on
-% run-loadtest job enhancements.
+% * Mention that the jenkins 2.0 upgrade is pseudo-blocking any further work on
+%   run-simple-loadtest job enhancements.
 \end{itemize}
 \end{frame}
 
