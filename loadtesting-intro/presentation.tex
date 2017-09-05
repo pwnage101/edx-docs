@@ -1,5 +1,7 @@
 \documentclass{beamer}
+\usepackage{minted}
 \usepackage{tikz}
+\usepackage{xcolor}
 \usetikzlibrary{positioning} 
 \usetikzlibrary{arrows.meta}
 
@@ -9,6 +11,7 @@
 \date{\today}
 
 \begin{document}
+
 
 \tikzstyle{title} = [text centered, text width=10em]
 \tikzstyle{base} = [rectangle, draw=black, text centered, text width=10em]
@@ -26,14 +29,124 @@
 \setbeamercovered{invisible}
 \begin{itemize}
 \item Tests live in the edx/edx-load-tests repo.\pause
-\item Uses locust.io load testing framework.\pause
-\item Tasks are written as python functions.\pause
-% TODO: insert small example of a task
-\item Tasks grouped into TaskSets.\pause
-% TaskSets represent different kinds of activities a user engages in.  For
-% example forums tasks are grouped inside the ForumsTasks TaskSet.
-\item TaskSet nesting.
+\item Uses the Locust load testing tool.
 \end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Why?}
+\setbeamercovered{invisible}
+\begin{itemize}
+% * The most obvious reason is to measure performance improvements to check
+%   your assumptions.
+\item Performance-related improvements.\pause
+% * But we also don't want to let regressions slip under the rug.
+\item Performance-sensitive code changes.
+\item Major version changes.
+\end{itemize}
+\end{frame}
+
+
+% Macro for highlighting blocks of code without affecting text positioning.
+\newcommand{\highlight}[1]{%
+  \begingroup
+  \setlength{\fboxsep}{0pt}%  
+  \colorbox{yellow}{\strut#1}%
+  \endgroup
+}
+\setminted{fontsize=\small,escapeinside=||,linenos}
+
+
+% * Locust tests are basically randomly selected python functions (tasks)
+%   repeatedly executed.
+% * Tasks are leaf nodes in a tree of TaskSet nodes.
+% * TaskSets represent different kinds of activities a user engages in.  For
+%   example in our LMS load test the forums-related tasks are grouped inside
+%   the ForumsTasks TaskSet.
+\begin{frame}[fragile]
+\frametitle{\texttt{locustfile.py}}
+\begin{minted}{python}
+class ChatTasks(TaskSet)
+    @task(2)
+    def open_chat():
+        print("opening a chat")
+    @task(3)
+    def send_message():
+        print("sending a message")
+
+
+class ServiceTasks(TaskSet):
+    tasks = {
+        ChatTasks: 1,
+        SearchTasks: 2,
+    }
+
+class ServiceUser(HttpLocust):
+    task_set = ServiceTasks
+    min_wait = 1000
+    max_wait = 5000
+\end{minted}
+\end{frame}
+
+
+% * In this example, ServiceTasks is the root TaskSet representing the entire
+%   service.
+% * Locusts select which task to execute using the probability distributions
+%   defined by the tasks class variable.
+% * Each task under ServiceTasks happens to be references to other TaskSets.
+\begin{frame}[fragile]
+\frametitle{\texttt{locustfile.py}}
+\begin{minted}{python}
+class ChatTasks(TaskSet)
+    @task(2)
+    def open_chat():
+        print("opening a chat")
+    @task(3)
+    def send_message():
+        print("sending a message")
+
+
+class |\highlight{ServiceTasks}|(TaskSet):
+    tasks = {
+        ChatTasks: 1,
+        SearchTasks: 2,
+    }
+
+class ServiceUser(HttpLocust):
+    task_set = |\highlight{ServiceTasks}|
+    min_wait = 1000
+    max_wait = 5000
+\end{minted}
+\end{frame}
+
+
+% * ChatTasks represents an activity for users on the the service
+% * The tasks in this example correspond to some possible AJAX calls from the
+%   client browser.
+\begin{frame}[fragile]
+\frametitle{\texttt{locustfile.py}}
+\begin{minted}{python}
+class |\highlight{ChatTasks}|(TaskSet)
+    @task(2)
+    def open_chat():
+        print("opening a chat")
+    @task(3)
+    def send_message():
+        print("sending a message")
+
+
+class ServiceTasks(TaskSet):
+    tasks = {
+        |\highlight{ChatTasks}|: 1,
+        SearchTasks: 2,
+    }
+
+class ServiceUser(HttpLocust):
+    task_set = ServiceTasks
+    min_wait = 1000
+    max_wait = 5000
+\end{minted}
 \end{frame}
 
 
@@ -41,15 +154,18 @@
 \frametitle{User Experience}
 \setbeamercovered{invisible}
 \begin{itemize}
-\item No browser, no javascript, no good measure of user experience.\pause
-\item Focus on the system response, not the users.\pause
-\item If you want, during a load test you could login from a browser.
+\item No browser, no javascript, no good measure of user experience.
+\item Focus on the system response, not the users.
+% * Now that you've seen an example locustfile, you may have noticed the tasks
+%   are relatively low-level.
+% * If you want, during a load test you could login from a browser to measure
+%   user experience.
 \end{itemize}
 \end{frame}
 
 
 \begin{frame}
-\frametitle{Running Load Tests Overview}
+\frametitle{Overview Of Running Load Tests}
 \setbeamercovered{invisible}
 \begin{center}
 \begin{tikzpicture}
@@ -77,15 +193,15 @@
 \draw[to-deemph] (sandbox2) -- (sandbox);
 \draw[to-deemph] (workstation) -- (devstack);
 
-% In most cases, the run-loadtest job targetting the loadtest environment is
-% what to use for large scale testing.
-
-% Driving load against a sandbox will likely reveal most performance
-% regressions, but the loadtest environment awards full-scale database,
-% autoscaling groups, IDAs deployed separately, etc.
-
-% For developing load tests you can just run locust locally and target your
-% local devstack.
+% * In most cases, the run-loadtest job targetting the loadtest environment is
+%   what to use for large scale testing.
+%
+% * Driving load against a sandbox will likely reveal most performance
+%   regressions, but the loadtest environment awards full-scale database,
+%   autoscaling groups, IDAs deployed separately, etc.
+%
+% * For developing load tests you can just run locust locally and target your
+%   local devstack.
 
 \end{tikzpicture}
 \end{center}
@@ -110,8 +226,9 @@
 \begin{itemize}
 \item Locust provides response time breakdown.\pause
 % But this doesn't really tell us more than NR.
-\item Click on the generated NewRelic links.\pause
-% TODO: insert screenshot
+\item Click on the summary artifact.
+\frame{\includegraphics[width=\textwidth]{summary_artifact.png}}
+\pause
 \item NewRelic provides deeper application insight.\pause
 % TODO: examples
 \item Custom metrics in edx-platform: make use of the custom metrics middleware
@@ -151,7 +268,7 @@
 
 
 \begin{frame}
-\frametitle{How to maintain load tests}
+\frametitle{Maintaining load tests}
 \begin{itemize}
 \item Task ratios will rot.\pause
 \item Tasks themselves will rot.\pause
