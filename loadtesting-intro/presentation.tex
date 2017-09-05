@@ -236,6 +236,30 @@ class ServiceUser(HttpLocust):
 
 
 \begin{frame}
+\frametitle{Time Investment For Running Tests}
+\begin{itemize}
+\item run-simple-loadtest Instructions:\pause
+      \begin{enumerate}
+      \item Fill in build parameters and click build.\pause
+      \item Wait 1 minute for an ec2 instance to launch and run your test.\pause
+      % * Take some time to emphasize how much of an improvement this is over
+      %   previous methods.
+      \end{enumerate}
+\item However, there's more to it than just running the test:\pause
+      \begin{itemize}
+      \item How difficult is it to seed your test data?\pause
+      \item Do you need to create/modify a locust task?\pause
+      \item How many tests do you need to run?\pause % for example, one baseline, one actual.  Do they each require an environment redeploy.
+      \item How long do the tests need to run?\pause
+      \item How easy is it to infer test outcomes?\pause % maybe you need to perform post-processing on the results.
+      \item Is there loadtest environment contention?\pause
+      \item Do you need to block on devops? % for example, to initiate a migration.
+      \end{itemize}
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
 \frametitle{Evaluating Load Test Runs}
 \begin{itemize}
 \item Locust provides response time breakdown.\pause
